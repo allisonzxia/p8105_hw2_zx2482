@@ -108,3 +108,22 @@ data_trash = bind_rows(gtw,mtw,ptw)
 str(data_trash)
 ```
 The `mtw` data has `r nrow(gtw)` observations and `r ncol(gtw)` variables, the he `ptw` data has `r nrow(ptw)` observations and `r ncol(ptw)` and tells us about litters the Mr. Trash Wheel, Professor Trash Wheel, and the Gwynnda Trash Wheel has removed as a water wheel vessel from the Inner Harbor in Baltimore, Maryland from years `r range(gtw$year,mtw$year,ptw$year)[1]` to `r range(gtw$year,mtw$year,ptw$year)[2]`. The total weight of trash collected by Professor Trash Wheel is `r filter(data_trash, wheel == "ptw") |> pull(weight_tons) |> sum() |> round(2)` tons. In July of 2021, the total number of cigarette butts collected by Gwynnda is `r filter(data_trash, wheel == "gtw") |> pull(cigarette_butts) |> sum () |> round(2)` 
+
+### Problem 3
+
+#### Import, clean and tidy MCI_baseline
+```{r clean baseline}
+mci_baseline = 
+  read_csv("./data_mci/MCI_baseline.csv", skip = 1) |> 
+  janitor::clean_names() |> 
+  filter(age_at_onset != ".") |> 
+  mutate(sex = case_when(sex == 1 ~ "m",
+                         sex == 0 ~"f"),
+         apoe4 = as.character(apoe4),
+         age_at_onset = as.numeric(age_at_onset)) 
+
+str(mci_baseline)
+```
+I use the parameter `skip = 1` when import `MCI_baseline.cvs` to skip the first row that is not the column names to make sure that the file is read correctly. Then I use `janitor::clean_names()` to make all variable names clean, use `filter()` to remove any participants who does not have MCI during the follow-up period, and lastly use `mutate()`,`case_when()`,`as.character()`,`as.numeric()` to encode `sex`,`apoe4`,`age_at_onset` appropriately. **483 participants were recruited, and `r nrow(mci_baseline)` of them develop MCI, the average baseline age is `r mean(mci_baseline$age_at_onset)``. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline, sex == "f"))/nrow(mci_baseline)`**
+
+#### Import, clean and tidy mci_amyloid
