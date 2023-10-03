@@ -113,11 +113,9 @@ The `mtw` data has `r nrow(gtw)` observations and `r ncol(gtw)` variables, the h
 
 #### Import, clean and tidy MCI_baseline
 ```{r clean baseline}
-mci_baseline_original <- read_csv("data_mci/MCI_baseline.csv",skip = 1)
-
-mci_baseline = mci_baseline_original |> 
+mci_baseline = read_csv("data_mci/MCI_baseline.csv",skip = 1)|> 
   janitor::clean_names() |> 
-  filter(age_at_onset != ".") |> 
+  filter(age_at_onset > current_age | age_at_onset == ".") |> 
   mutate(sex = case_when(sex == 1 ~ "m",
                          sex == 0 ~"f"),
          apoe4 = as.character(apoe4),
@@ -125,7 +123,7 @@ mci_baseline = mci_baseline_original |>
 
 str(mci_baseline)
 ```
-I use the parameter `skip = 1` when importing `MCI_baseline.csv` to skip the first row, which is not the column names, to ensure that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I use `filter()` to remove any participants who do not have MCI during the follow-up period. Lastly, I use `mutate()`, `case_when()`, `as.character()`, and `as.numeric()` to appropriately encode `sex`, `apoe4`, and `age_at_onset`. A total of `r nrow(mci_baseline_original)` participants were recruited, and `r nrow(mci_baseline)` of them developed MCI. The average baseline age is `r mean(mci_baseline$age_at_onset)`. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline, sex == "f"))/nrow(mci_baseline)`.
+I use the parameter `skip = 1` when importing `MCI_baseline.csv` to skip the first row, which is not the column names, to ensure that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I use `filter()` to remove any participants whose MCI onset appears to predate enrollment. Lastly, I use `mutate()`, `case_when()`, `as.character()`, and `as.numeric()` to appropriately encode `sex`, `apoe4`, and `age_at_onset`. A total of `r nrow(mci_baseline)` participants were recruited, and `r filter(mci_baseline, age_at_onset != ".") |> nrow()` of them developed MCI. The average baseline age is `r filter(mci_baseline, age_at_onset != ".") |> pull(age_at_onset) |> mean()`. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline, sex == "f"))/nrow(mci_baseline)`.
 
 #### Import, clean and tidy mci_amyloid
 ```{r clean mci_amyloid}
@@ -142,5 +140,6 @@ The dataset records the Amyloid β 42/40 ratio of participants over the study fo
 #### Combine the mci_baseline and mci_amyloid
 ```{r combine_2_datasets}
 commonID <-intersect(mci_baseline$id, mci_amyloid$id)
+
 ```
 
