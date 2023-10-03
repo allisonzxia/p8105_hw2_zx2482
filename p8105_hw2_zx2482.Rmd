@@ -69,7 +69,7 @@ The `pols` data has `r nrow(pols)` observations and `r ncol(pols)` variables and
 ### Problem 2
 ```{r clean Mr._Trash_Wheel}
 mtw = 
-  read_excel("./202207 Trash Wheel Collection Data.xlsx", sheet="Mr. Trash Wheel", range =cell_cols("A:N")) |> 
+  read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet="Mr. Trash Wheel", range =cell_cols("A:N")) |> 
   janitor::clean_names() |> 
   separate(date, into = c("year_2", "month_num", "day"), convert = TRUE) |> 
   select(-year_2) |> 
@@ -81,7 +81,7 @@ mtw =
 
 ```{r clean Professor_Trash_Weel}
 ptw = 
-  read_excel("./202207 Trash Wheel Collection Data.xlsx", sheet="Professor Trash Wheel", range =cell_cols("A:M")) |> 
+  read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet="Professor Trash Wheel", range =cell_cols("A:M")) |> 
   janitor::clean_names() |> 
   separate(date, into = c("year_2", "month_num", "day"), convert = TRUE) |> 
   select(-year_2) |> 
@@ -93,7 +93,7 @@ ptw =
 
 ```{r clean Gwynnda_Trash_Wheel}
 gtw = 
-  read_excel("./202207 Trash Wheel Collection Data.xlsx", sheet="Gwynnda Trash Wheel", range =cell_cols("A:K")) |> 
+  read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet="Gwynnda Trash Wheel", range =cell_cols("A:K")) |> 
   janitor::clean_names() |> 
   separate(date, into = c("year_2", "month_num", "day"), convert = TRUE) |> 
   select(-year_2) |> 
@@ -125,12 +125,22 @@ mci_baseline = mci_baseline_original |>
 
 str(mci_baseline)
 ```
-I use the parameter `skip = 1` when import `MCI_baseline.cvs` to skip the first row that is not the column names to make sure that the file is read correctly. Then I use `janitor::clean_names()` to make all variable names clean, use `filter()` to remove any participants who does not have MCI during the follow-up period, and lastly use `mutate()`,`case_when()`,`as.character()`,`as.numeric()` to encode `sex`,`apoe4`,`age_at_onset` appropriately. **`r nrow(mci_baseline_original)` participants were recruited, and `r nrow(mci_baseline)` of them develop MCI, the average baseline age is `r mean(mci_baseline$age_at_onset)``. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline, sex == "f"))/nrow(mci_baseline)`**
+I use the parameter `skip = 1` when importing `MCI_baseline.csv` to skip the first row, which is not the column names, to ensure that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I use `filter()` to remove any participants who do not have MCI during the follow-up period. Lastly, I use `mutate()`, `case_when()`, `as.character()`, and `as.numeric()` to appropriately encode `sex`, `apoe4`, and `age_at_onset`. A total of `r nrow(mci_baseline_original)` participants were recruited, and `r nrow(mci_baseline)` of them developed MCI. The average baseline age is `r mean(mci_baseline$age_at_onset)`. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline, sex == "f"))/nrow(mci_baseline)`.
 
 #### Import, clean and tidy mci_amyloid
-```{r clean amyloid}
+```{r clean mci_amyloid}
 mci_amyloid = 
   read_csv("./data_mci/mci_amyloid.csv",skip = 1) |> 
-  janitor::clean_names()
+  janitor::clean_names() |> 
+  rename(id = study_id)
 str(mci_amyloid)
 ```
+
+I use the parameter `skip = 1` when importing `mci_amyloid.csv` to skip the first row, which is not the column names. This ensures that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I also change the variable `study_id` to `id` to maintain consistency across datasets.
+The dataset records the Amyloid β 42/40 ratio of participants over the study follow-up time. It contains `r nrow(mci_amyloid)` observations and `r ncol(mci_amyloid)` variables. Some `NA` values exist in the `time_n` variables, indicating that the Amyloid β 42/40 ratio is missing for the corresponding participant at that visit.
+
+#### Combine the mci_baseline and mci_amyloid
+```{r combine_2_datasets}
+commonID <-intersect(mci_baseline$id, mci_amyloid$id)
+```
+
