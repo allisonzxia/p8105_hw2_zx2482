@@ -54,7 +54,7 @@ unemployment =
   select(year, month, unemployment)
 ```
 
-#### Merge the three datasets!
+#### Merge the three datasets
 
 ```{r merge_538}
 data_538 = 
@@ -137,9 +137,23 @@ str(mci_amyloid)
 I use the parameter `skip = 1` when importing `mci_amyloid.csv` to skip the first row, which is not the column names. This ensures that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I also change the variable `study_id` to `id` to maintain consistency across datasets.
 The dataset records the Amyloid β 42/40 ratio of participants over the study follow-up time. It contains `r nrow(mci_amyloid)` observations and `r ncol(mci_amyloid)` variables. Some `NA` values exist in the `time_n` variables, indicating that the Amyloid β 42/40 ratio is missing for the corresponding participant at that visit.
 
-#### Combine the mci_baseline and mci_amyloid
+#### Check whether some participants appear in only 1 dataset
 ```{r combine_2_datasets}
 commonID <-intersect(mci_baseline$id, mci_amyloid$id)
-
+mci_amyloid_only = 
+  mci_amyloid |> 
+  filter(!id %in% commonID)
+mci_baseline_only =
+  mci_baseline |> 
+  filter(!id %in% commonID)
 ```
 
+There are `r nrow(mci_baseline_only)` observations that appear in only the baseline dataset and`r nrow(mci_amyloid_only)` observations that appear in only the amyloid dataset.In order to combine these two datasets, we need to remove those which only appear in 1 dataset.
+
+#### Combine two datasets
+```{r}
+mci =
+  inner_join(mci_baseline,mci_amyloid, by="id")
+write_csv(mci, "./mci.csv")
+```
+The dataset `mci` is the combined dataset of both the demographic and biomarker datasets so that only participants who appear in both datasets are retained. It has `r nrow(mci)` observations and `rcol(mci)` variables. `NA` exists in the `age_at_onset` to mean the participant remains MCI free during the follow-up period. Some `NA` values exist in the `time_n` variables, indicating that the Amyloid β 42/40 ratio is missing for the corresponding participant at that visit. The exported file is `mci.csv`.
