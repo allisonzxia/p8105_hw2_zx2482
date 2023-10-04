@@ -118,7 +118,8 @@ mci_baseline = read_csv("data_mci/MCI_baseline.csv",skip = 1)|>
   filter(age_at_onset > current_age | age_at_onset == ".") |> 
   mutate(sex = case_when(sex == 1 ~ "m",
                          sex == 0 ~"f"),
-         apoe4 = as.character(apoe4),
+         sex = factor(sex),
+         apoe4 = factor(apoe4),
          age_at_onset = as.numeric(age_at_onset)) 
 
 str(mci_baseline)
@@ -130,7 +131,17 @@ I use the parameter `skip = 1` when importing `MCI_baseline.csv` to skip the fir
 mci_amyloid = 
   read_csv("./data_mci/mci_amyloid.csv",skip = 1) |> 
   janitor::clean_names() |> 
-  rename(id = study_id)
+  rename(id = study_id,
+         time_bl = baseline) |> 
+  pivot_longer(
+    time_bl:time_8,
+    names_to = "visit", 
+    names_prefix = "time_",
+    values_to = "ratio") |>
+  mutate(
+    visit = replace(visit, visit == "bl", "1"),
+    visit = factor(visit))
+ 
 str(mci_amyloid)
 ```
 
@@ -141,14 +152,14 @@ The dataset records the Amyloid β 42/40 ratio of participants over the study fo
 ```{r combine_2_datasets}
 commonID <-intersect(mci_baseline$id, mci_amyloid$id)
 mci_amyloid_only = 
-  mci_amyloid |> 
+  mci_amyloid |>
   filter(!id %in% commonID)
 mci_baseline_only =
   mci_baseline |> 
   filter(!id %in% commonID)
 ```
 
-There are `r nrow(mci_baseline_only)` observations that appear in only the baseline dataset and`r nrow(mci_amyloid_only)` observations that appear in only the amyloid dataset.In order to combine these two datasets, we need to remove those which only appear in 1 dataset.
+There are `r nrow(mci_baseline_only)` observations that appear in only the baseline dataset and `r length(unique(mci_amyloid_only$id))` observations that appear in only the amyloid dataset.In order to combine these two datasets, we need to remove those which only appear in 1 dataset.
 
 #### Combine two datasets
 ```{r}
