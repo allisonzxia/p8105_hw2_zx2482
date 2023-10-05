@@ -107,14 +107,15 @@ gtw =
 data_trash = bind_rows(gtw,mtw,ptw)
 str(data_trash)
 ```
-The `mtw` data has `r nrow(gtw)` observations and `r ncol(gtw)` variables, the he `ptw` data has `r nrow(ptw)` observations and `r ncol(ptw)` and tells us about litters the Mr. Trash Wheel, Professor Trash Wheel, and the Gwynnda Trash Wheel has removed as a water wheel vessel from the Inner Harbor in Baltimore, Maryland from years `r range(gtw$year,mtw$year,ptw$year)[1]` to `r range(gtw$year,mtw$year,ptw$year)[2]`. The total weight of trash collected by Professor Trash Wheel is `r filter(data_trash, wheel == "ptw") |> pull(weight_tons) |> sum() |> round(2)` tons. In July of 2021, the total number of cigarette butts collected by Gwynnda is `r filter(data_trash, wheel == "gtw") |> pull(cigarette_butts) |> sum () |> round(2)` 
+The `mtw` data has `r nrow(mtw)` observations and `r ncol(mtw)` variables, the `ptw` data has `r nrow(ptw)` observations and `r ncol(ptw)` and `gtw` data has `r nrow(gtw)` observations and `r ncol(gtw)`.The datasets tell us about litters that the Mr. Trash Wheel, Professor Trash Wheel, and the Gwynnda Trash Wheel has removed as a water wheel vessel from the Inner Harbor in Baltimore, Maryland from years `r range(gtw$year,mtw$year,ptw$year)[1]` to `r range(gtw$year,mtw$year,ptw$year)[2]`. The total weight of trash collected by Professor Trash Wheel is `r filter(data_trash, wheel == "ptw") |> pull(weight_tons) |> sum() |> round(2)` tons. In July of 2021, the total number of cigarette butts collected by Gwynnda is `r filter(data_trash, wheel == "gtw", year == 2021, month_num == 7) |> pull(cigarette_butts) |> sum () |> round(2)` 
 
 ### Problem 3
 
 #### Import, clean and tidy MCI_baseline
 ```{r clean baseline}
 mci_baseline = read_csv("data_mci/MCI_baseline.csv",skip = 1)|> 
-  janitor::clean_names() |> 
+  janitor::clean_names()
+mci_baseline_clean = mci_baseline |> 
   filter(age_at_onset > current_age | age_at_onset == ".") |> 
   mutate(sex = case_when(sex == 1 ~ "m",
                          sex == 0 ~"f"),
@@ -122,9 +123,9 @@ mci_baseline = read_csv("data_mci/MCI_baseline.csv",skip = 1)|>
          apoe4 = factor(apoe4),
          age_at_onset = as.numeric(age_at_onset)) 
 
-str(mci_baseline)
+str(mci_baseline_clean)
 ```
-I use the parameter `skip = 1` when importing `MCI_baseline.csv` to skip the first row, which is not the column names, to ensure that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I use `filter()` to remove any participants whose MCI onset appears to predate enrollment. Lastly, I use `mutate()`, `case_when()`, `as.character()`, and `as.numeric()` to appropriately encode `sex`, `apoe4`, and `age_at_onset`. A total of `r nrow(mci_baseline)` participants were recruited, and `r filter(mci_baseline, age_at_onset != ".") |> nrow()` of them developed MCI. The average baseline age is `r filter(mci_baseline, age_at_onset != ".") |> pull(age_at_onset) |> mean()`. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline, sex == "f"))/nrow(mci_baseline)`.
+I use the parameter `skip = 1` when importing `MCI_baseline.csv` to skip the first row, which is not the column names, to ensure that the file is read correctly. Then, I use `janitor::clean_names()` to clean all variable names. I use `filter()` to remove any participants whose MCI onset appears to predate enrollment. Lastly, I use `mutate()`, `case_when()`, `as.character()`, and `as.numeric()` to appropriately encode `sex`, `apoe4`, and `age_at_onset`. A total of `r nrow(mci_baseline)` participants were recruited, and `r nrow(mci_baseline_clean)`participants met the inclusion criteria. `r filter(mci_baseline_clean, age_at_onset != ".") |> nrow()` of them developed MCI. The average baseline age is `r filter(mci_baseline_clean, age_at_onset != ".") |> pull(current_age) |> mean()`. The proportion of women who are APOE4 carriers in the study is `r nrow(filter(mci_baseline_clean, sex == "f" & apoe4 == 1))/nrow(filter(mci_baseline_clean,sex == "f"))`.
 
 #### Import, clean and tidy mci_amyloid
 ```{r clean mci_amyloid}
@@ -150,21 +151,21 @@ The dataset records the Amyloid β 42/40 ratio of participants over the study fo
 
 #### Check whether some participants appear in only 1 dataset
 ```{r combine_2_datasets}
-commonID <-intersect(mci_baseline$id, mci_amyloid$id)
+commonID <-intersect(mci_baseline_clean$id, mci_amyloid$id)
 mci_amyloid_only = 
   mci_amyloid |>
   filter(!id %in% commonID)
 mci_baseline_only =
-  mci_baseline |> 
+  mci_baseline_clean |> 
   filter(!id %in% commonID)
 ```
 
-There are `r nrow(mci_baseline_only)` observations that appear in only the baseline dataset and `r length(unique(mci_amyloid_only$id))` observations that appear in only the amyloid dataset.In order to combine these two datasets, we need to remove those which only appear in 1 dataset.
+There are `r nrow(mci_baseline_only)` participants that appear in only the baseline dataset and `r length(unique(mci_amyloid_only$id))` participants that appear in only the amyloid dataset. In order to combine these two datasets, we need to remove those which only appear in 1 dataset.
 
 #### Combine two datasets
-```{r}
+```{r save_as_mci.csv}
 mci =
-  inner_join(mci_baseline,mci_amyloid, by="id")
+  inner_join(mci_baseline_clean,mci_amyloid, by="id")
 write_csv(mci, "./mci.csv")
 ```
-The dataset `mci` is the combined dataset of both the demographic and biomarker datasets so that only participants who appear in both datasets are retained. It has `r nrow(mci)` observations and `rcol(mci)` variables. `NA` exists in the `age_at_onset` to mean the participant remains MCI free during the follow-up period. Some `NA` values exist in the `time_n` variables, indicating that the Amyloid β 42/40 ratio is missing for the corresponding participant at that visit. The exported file is `mci.csv`.
+The dataset `mci` is the combined dataset of both the demographic and biomarker datasets so that only participants who appear in both datasets are retained. It has `r nrow(mci)` observations and `r ncol(mci)` variables. The variables in this dataset are `r names(mci)`.`NA` that exists in the `age_at_onset` means that the participant remains MCI free during the follow-up period. Some `NA` values exist in the `time_n` variables, indicating that the Amyloid β 42/40 ratio is missing for the corresponding participant at that visit. The exported file is `mci.csv`.
